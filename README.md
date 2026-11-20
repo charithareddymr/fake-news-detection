@@ -8,6 +8,26 @@ The pipeline covers preprocessing, train/val/test splitting, RNN / LSTM / Transf
 
 See [reports/final_report.md](reports/final_report.md) for the writeup with numbers, ablations, limitations, and ethics discussion.
 
+## Team project
+
+Built for CSE 676 (Deep Learning) at the University at Buffalo by a team of three:
+**Charitha Reddy**, **Rithvik Illandula** ([original repository](https://github.com/RITHVIKILLANDULA/DL_Project)) and **Venkata Praneeth Cheturi**. All three of us contributed across data preparation, training, evaluation and the report.
+
+### My contributions
+
+**Fixing the BiRNN.** The vanilla `nn.RNN` with a last-hidden-state read-out collapsed to predicting the majority class: 0.515 test accuracy, *below* the 0.558 majority baseline. I redesigned it as a **bidirectional RNN with masked mean pooling over time and gradient clipping at 1.0**, which removed the vanishing-gradient bottleneck:
+
+| BiRNN | Test F1 |
+|---|---|
+| Vanilla RNN, last hidden state | 0.527 (degenerate) |
+| Bidirectional + mean pooling + gradient clipping | **0.610**, the highest F1 of all four models, stable across 3 seeds (± 0.002) |
+
+**Error analysis.** I broke the results down by source dataset and text length and studied each model's false positives and negatives:
+- **Long articles:** the recurrent models collapse on long FakeNewsNet articles because inputs are truncated at 256 tokens, while DistilBERT gets 21 of 22 right (0.955 accuracy) and wins 5 of 6 length bins.
+- **TF-IDF** can't handle negation, so claims that hinge on a single *not* or *no* are systematically misclassified.
+- **BiLSTM** errors concentrate on short statements with proper nouns missing from GloVe (32.6% out-of-vocabulary on those rows).
+- **DistilBERT** has a near-balanced confusion matrix (227 false negatives vs 236 false positives), so it's well calibrated without threshold tuning.
+
 ## Demo (screenshots)
 
 The Flask app at `app/app_flask.py` exposes a one-click web UI: paste text, pick a model from the dropdown (DistilBERT, BiLSTM, or BiRNN), set the threshold, and get a real/fake prediction with probability.
